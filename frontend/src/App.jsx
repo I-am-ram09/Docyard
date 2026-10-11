@@ -8,6 +8,8 @@ import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Upload from "./pages/Upload.jsx";
+import NewCollab from "./pages/NewCollab.jsx";
+import CollabRoom from "./pages/CollabRoom.jsx";
 
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -76,6 +78,24 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <Upload />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/collab/new"
+          element={
+            <RequireAuth>
+              <NewCollab />
+            </RequireAuth>
+          }
+        />
+        {/* Guests open an invite link - no account needed */}
+        <Route path="/collab/join/:token" element={<CollabRoom mode="guest" />} />
+        <Route
+          path="/collab/:id"
+          element={
+            <RequireAuth>
+              <CollabRoom mode="owner" />
             </RequireAuth>
           }
         />

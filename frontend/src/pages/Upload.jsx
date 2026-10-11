@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { getErrorMessage } from "../api";
 import { useLang } from "../i18n/index.jsx";
+import ClusterFields from "../components/ClusterFields.jsx";
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function Upload() {
   const [name, setName] = useState("");
   const [credentials, setCredentials] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [fields, setFields] = useState({ cluster: "personal", category: "", tags: "" });
+  const [lockPassword, setLockPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +37,10 @@ export default function Upload() {
       formData.append("name", name);
       formData.append("credentials", credentials);
       if (expiryDate) formData.append("expiryDate", expiryDate);
+      formData.append("cluster", fields.cluster);
+      formData.append("category", fields.category);
+      formData.append("tags", fields.tags);
+      if (lockPassword) formData.append("lockPassword", lockPassword);
 
       await api.post("/documents", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -87,6 +94,8 @@ export default function Upload() {
           />
         </div>
 
+        <ClusterFields value={fields} onChange={(patch) => setFields((f) => ({ ...f, ...patch }))} />
+
         <div className="field">
           <label htmlFor="credentials">{t("upload.credLabel")}</label>
           <textarea
@@ -109,6 +118,19 @@ export default function Upload() {
           <span className="field-hint">
             {t("upload.expiryHint")}
           </span>
+        </div>
+
+        <div className="field">
+          <label htmlFor="lockPassword">🔒 {t("upload.lockLabel")}</label>
+          <input
+            id="lockPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={6}
+            value={lockPassword}
+            onChange={(e) => setLockPassword(e.target.value)}
+          />
+          <span className="field-hint">{t("upload.lockHint")}</span>
         </div>
 
         <button className="btn btn-primary btn-block" disabled={loading}>

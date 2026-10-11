@@ -1,4 +1,5 @@
 require("dotenv").config();
+const http = require("http");
 const express = require("express");
 const cors = require("cors");
 
@@ -23,10 +24,13 @@ const db = require("./db");
 const authRoutes = require("./routes/auth");
 const documentRoutes = require("./routes/documents");
 const shareRoutes = require("./routes/share");
+const collabRoutes = require("./routes/collab");
+const collabServer = require("./collab/hocuspocus");
 const { startExpiryCron } = require("./utils/cron");
 const { fail } = require("./utils/http");
 
 const app = express();
+app.set("trust proxy", 1); // Render/Railway sit behind a proxy; needed for correct per-IP rate limits
 
 const allowedOrigins = (process.env.CLIENT_URL || "*").split(",").map((s) => s.trim());
 app.use(cors({ origin: allowedOrigins.includes("*") ? "*" : allowedOrigins }));
@@ -37,6 +41,7 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/share", shareRoutes);
+app.use("/api/collab", collabRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -50,7 +55,9 @@ const PORT = process.env.PORT || 4000;
 
 db.init()
   .then(() => {
-    app.listen(PORT, () => {
+    const server = http.createServer(app);
+    collabServer.attach(server, allowedOrigins); // WebSocket endpoint for live editing: /collab
+    server.listen(PORT, () => {
       console.log(`DocYard API running on port ${PORT}`);
       startExpiryCron();
     });

@@ -10,6 +10,12 @@ export default defineConfig({
         target: "http://localhost:4000",
         changeOrigin: true,
       },
+      // live editing (WebSocket)
+      "/collab": {
+        target: "http://localhost:4000",
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
 });

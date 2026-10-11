@@ -47,6 +47,43 @@ async function init() {
     CREATE INDEX IF NOT EXISTS idx_docs_user ON documents(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_docs_share ON documents(share_token);
   `);
+
+  // --- v3 upgrade: clusters/categories, password lock, collaborative documents -------------------
+  // Every statement is idempotent, so it is safe on every start and on your existing data.
+  await run(`
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS cluster TEXT NOT NULL DEFAULT 'other';
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS tags TEXT;
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS lock_hash TEXT;
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'file';
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS collab_state BYTEA;
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+    ALTER TABLE documents ALTER COLUMN storage_key DROP NOT NULL;
+    ALTER TABLE documents ALTER COLUMN original_filename DROP NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_docs_cluster ON documents(user_id, cluster);
+
+    CREATE TABLE IF NOT EXISTS doc_invites (
+      id TEXT PRIMARY KEY,
+      doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'editor',
+      label TEXT,
+      expires_at TIMESTAMPTZ,
+      revoked BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS doc_activity (
+      id BIGSERIAL PRIMARY KEY,
+      doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      actor_id TEXT NOT NULL,
+      actor_name TEXT NOT NULL,
+      role TEXT,
+      action TEXT NOT NULL,
+      at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_activity_doc ON doc_activity(doc_id, at DESC);
+  `);
 }
 
 module.exports = { pool, many, one, run, init };

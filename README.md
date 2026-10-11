@@ -104,3 +104,31 @@ A cloud database alone isn't enough - the backend and frontend also need to be o
   awake. Use a paid/always-on instance (or an uptime pinger on `/api/health`) for dependable reminders.
 - Data from an older local SQLite version of DocYard is not migrated - re-upload those documents.
 - Uploads are limited to 25MB per file.
+
+---
+
+## v3 additions
+
+**New features:** document groups (academic / personal / work / other) with 72 ready-made document types in
+English, Hindi and Marathi - search, sort and filter - per-document password lock - collaborative documents
+with invite links, live cursors, an activity log (who edited and when) and "download a copy".
+
+**Upgrading an existing deployment**
+
+1. `cd backend && npm install` and `cd ../frontend && npm install` (new packages), then commit the updated
+   `package-lock.json` files.
+2. No new environment variables. The new database columns/tables are created automatically on the first start
+   (`ALTER TABLE ... IF NOT EXISTS`), and your existing documents keep working (they land in the "Other" group -
+   use **Edit** on a card to move them).
+3. Redeploy the backend first (Render supports WebSockets, which live editing needs), then the frontend.
+4. Backend host must keep running as a normal web service (not serverless). Live editing connects to
+   `wss://<backend>/collab`; `CLIENT_URL` must list your frontend origin (it is also used to check the WebSocket origin).
+
+**Where things live**
+
+- `backend/routes/documents.js` - search/sort/filter query, groups, password lock/unlock, edit details
+- `backend/routes/collab.js` - collaborative documents, invite links, guest join, activity log
+- `backend/collab/hocuspocus.js` - the live-editing WebSocket server (Yjs) + per-user edit tracking
+- `backend/utils/tokens.js` - short-lived scoped tokens (unlock / collaborator) kept separate from login tokens
+- `frontend/src/data/documentTypes.js` - the document-type list (add a line to add a type)
+- `frontend/src/components/CollabEditor.jsx` - the editor, activity panel and invite panel
